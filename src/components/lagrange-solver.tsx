@@ -22,6 +22,18 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend, Scatter, ReferenceDot, Label as RechartsLabel, ReferenceLine } from "recharts";
+import { cn } from "@/lib/utils";
+
+// Helper component to render fractions
+const SymbolicFraction: React.FC<{ numerator: string | React.ReactNode; denominator: string | React.ReactNode; className?: string }> = ({ numerator, denominator, className }) => {
+  return (
+    <div className={cn("inline-flex flex-col items-center text-center align-middle mx-1 leading-tight", className)}>
+      <span className="px-1 pb-0.5">{numerator}</span>
+      <hr className="w-full border-foreground my-0.5" />
+      <span className="px-1 pt-0.5">{denominator}</span>
+    </div>
+  );
+};
 
 
 export function LagrangeSolver() {
@@ -131,7 +143,7 @@ export function LagrangeSolver() {
                     </FormItem>
                   )}
                 />
-                {fields.length > 1 && ( // Allow removing if more than 1 point, as schema min is 1.
+                {fields.length > 1 && ( 
                   <Button
                     type="button"
                     variant="ghost"
@@ -222,7 +234,8 @@ export function LagrangeSolver() {
                 <div>
                   <h3 className="font-semibold">Interpolated Value:</h3>
                   <p className="text-2xl">
-                    L({result.interpolationPoint?.toString()}) = <span className="font-bold text-accent">{result.interpolatedValue?.toFixed(6)}</span>
+                    L({result.interpolationPoint?.toString()}) =&nbsp;
+                    <span className="font-bold text-accent">{result.interpolatedValue?.toFixed(6)}</span>
                   </p>
                 </div>
                 <div>
@@ -259,25 +272,78 @@ export function LagrangeSolver() {
                         <AccordionTrigger>
                           Term {index + 1}: Contribution of y<sub>{step.termIndex}</sub> = {step.yValue.toFixed(4)}
                         </AccordionTrigger>
-                        <AccordionContent className="space-y-3 text-sm p-4 bg-background rounded-md border">
+                        <AccordionContent className="space-y-4 text-sm p-4 bg-background rounded-md border">
+                          {/* Section 1: Basis Polynomial Definition */}
                           <div>
-                            <p><strong>Basis Polynomial L<sub>{step.termIndex}</sub>(x):</strong></p>
-                            <p className="font-code break-all text-muted-foreground">L<sub>{step.termIndex}</sub>(x) = Product<sub>k≠{step.termIndex}</sub> (x - x<sub>k</sub>) / (x<sub>{step.termIndex}</sub> - x<sub>k</sub>)</p>
-                            <p className="font-code break-all">L<sub>{step.termIndex}</sub>(x) = {step.basisNumeratorSymbolic || "1"} / ({step.basisDenominatorSymbolic || "1"})</p>
-                            <p className="font-code break-all">= ({step.basisNumeratorSymbolic || "1"}) / {step.basisDenominatorValue.toFixed(6)}</p>
-                            <p className="font-code break-all mt-1">Simplified L<sub>{step.termIndex}</sub>(x): {step.basisPolynomialSymbolic}</p>
+                            <p className="font-semibold">Basis Polynomial L<sub>{step.termIndex}</sub>(x)</p>
+                            <p className="text-muted-foreground text-xs mt-0.5">
+                              General form: L<sub>{step.termIndex}</sub>(x) = &prod;<sub>k&ne;{step.termIndex}</sub>
+                              <span className="inline-block align-middle text-center mx-1">
+                                (x - x<sub>k</sub>) / (x<sub>{step.termIndex}</sub> - x<sub>k</sub>)
+                              </span>
+                            </p>
+                            <div className="mt-2 flex items-center flex-wrap">
+                              Actual L<sub>{step.termIndex}</sub>(x) =&nbsp;
+                              <SymbolicFraction 
+                                numerator={step.basisNumeratorSymbolic || "1"} 
+                                denominator={`(${step.basisDenominatorSymbolic || "1"})`} 
+                              />
+                            </div>
+                            <div className="mt-2 flex items-center flex-wrap">
+                              =&nbsp;
+                              <SymbolicFraction 
+                                numerator={step.basisNumeratorSymbolic || "1"} 
+                                denominator={step.basisDenominatorValue.toFixed(6)} 
+                              />
+                            </div>
                           </div>
                           
+                          {/* Section 2: Evaluation */}
                           <div>
-                            <p className="mt-2"><strong>Evaluating L<sub>{step.termIndex}</sub>(x) at x = {result.interpolationPoint?.toString()}:</strong></p>
-                            <p className="font-code break-all">L<sub>{step.termIndex}</sub>({result.interpolationPoint?.toString()}) = ({step.basisNumeratorAtXValues || "1"}) / {step.basisDenominatorValue.toFixed(6)}</p>
-                            <p className="font-code break-all">= {step.basisNumeratorAtXProduct.toFixed(6)} / {step.basisDenominatorValue.toFixed(6)} = <span className="font-semibold">{step.basisPolynomialValueAtX.toFixed(6)}</span></p>
+                            <p className="font-semibold mt-3">Evaluating L<sub>{step.termIndex}</sub>(x) at x = {result.interpolationPoint?.toString()}</p>
+                            <div className="mt-2 flex items-center flex-wrap">
+                              L<sub>{step.termIndex}</sub>({result.interpolationPoint?.toString()}) =&nbsp;
+                              <SymbolicFraction 
+                                numerator={step.basisNumeratorAtXValues || "1"} 
+                                denominator={step.basisDenominatorValue.toFixed(6)} 
+                              />
+                            </div>
+                            <div className="mt-2 flex items-center flex-wrap">
+                              =&nbsp;
+                              <SymbolicFraction 
+                                numerator={step.basisNumeratorAtXProduct.toFixed(6)} 
+                                denominator={step.basisDenominatorValue.toFixed(6)} 
+                              />
+                              &nbsp;=&nbsp;<span className="font-bold">{step.basisPolynomialValueAtX.toFixed(6)}</span>
+                            </div>
                           </div>
                           
+                          {/* Section 3: Term Contribution */}
                           <div>
-                            <p className="mt-2"><strong>Term Contribution: y<sub>{step.termIndex}</sub> * L<sub>{step.termIndex}</sub>({result.interpolationPoint?.toString()}):</strong></p>
-                            <p className="font-code break-all">= {step.yValue.toFixed(4)} * {step.basisPolynomialValueAtX.toFixed(6)}</p>
-                            <p className="font-code break-all">= <span className="font-semibold text-primary">{step.termValueAtX.toFixed(6)}</span></p>
+                            <p className="font-semibold mt-3">Term Contribution: y<sub>{step.termIndex}</sub> &middot; L<sub>{step.termIndex}</sub>({result.interpolationPoint?.toString()})</p>
+                            { form.getValues("dataPoints").length > 1 && (step.basisNumeratorSymbolic !== "1" || step.basisDenominatorSymbolic !== "1" || step.basisDenominatorValue !== 1.0) &&
+                              <div className="mt-2 flex items-center flex-wrap">
+                                Symbolic Term<sub>{step.termIndex}</sub> =&nbsp;
+                                <SymbolicFraction
+                                  numerator={
+                                    <span className="whitespace-nowrap">{step.yValue.toFixed(4)} &middot; ({step.basisNumeratorSymbolic || "1"})</span>
+                                  }
+                                  denominator={step.basisDenominatorValue.toFixed(6)}
+                                />
+                              </div>
+                            }
+                            { (form.getValues("dataPoints").length === 1 || (step.basisNumeratorSymbolic === "1" && step.basisDenominatorSymbolic ==="1" && step.basisDenominatorValue === 1.0)) &&
+                               <p className="mt-1">
+                                 Symbolic Term<sub>{step.termIndex}</sub> = {step.yValue.toFixed(4)}
+                               </p>
+                            }
+
+                            <p className="mt-2">
+                              Numerical Term<sub>{step.termIndex}</sub> = {step.yValue.toFixed(4)} &middot; {step.basisPolynomialValueAtX.toFixed(6)}
+                            </p>
+                            <p className="mt-1">
+                              =&nbsp;<span className="font-bold text-primary">{step.termValueAtX.toFixed(6)}</span>
+                            </p>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
@@ -285,7 +351,7 @@ export function LagrangeSolver() {
                   </Accordion>
                   <div className="mt-6 p-4 bg-muted rounded-md">
                       <h3 className="font-semibold text-md">Sum of Term Contributions (Final Interpolated Value):</h3>
-                      <p className="font-code break-all text-sm mt-1">
+                      <p className="break-all text-sm mt-1"> {/* Removed font-code */}
                         L({result.interpolationPoint?.toString()}) = {result.calculationSteps.map(s => s.termValueAtX.toFixed(6)).join(" + ")} = <span className="font-bold text-accent text-lg">{result.interpolatedValue?.toFixed(6)}</span>
                       </p>
                     </div>
