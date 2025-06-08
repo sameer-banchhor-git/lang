@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 const DataPointSchema = z.object({
@@ -11,15 +12,18 @@ const DataPointSchema = z.object({
 
 export const LagrangeFormSchema = z.object({
   dataPoints: z.array(DataPointSchema)
-    .min(2, "At least two data points are required.")
+    .min(1, "At least one data point is required.") // Changed from 2 to 1 to allow single point (constant polynomial)
     .refine(points => {
-      const xValues = points.map(p => parseFloat(p.x));
-      // Check if all parsed xValues are numbers before creating Set
-      if (xValues.some(isNaN)) return false; // Should be caught by individual point validation, but good fallback
+      if (points.length <= 1) return true; // No need to check for uniqueness if 0 or 1 point
+      const xValues = points.map(p => {
+        const numX = parseFloat(p.x);
+        return isNaN(numX) ? NaN : numX; // Ensure parsing before Set
+      });
+      if (xValues.some(isNaN)) return false; 
       return new Set(xValues).size === xValues.length;
     }, {
       message: "All X values in data points must be unique.",
-      path: ["dataPoints"], 
+      path: ["root"], // Apply error to the root of dataPoints array for better display
     }),
   interpolationX: z.string().refine(val => val.trim() !== '' && !isNaN(parseFloat(val)), {
     message: "Interpolation X must be a number.",
@@ -28,3 +32,5 @@ export const LagrangeFormSchema = z.object({
 
 export type LagrangeFormValues = z.infer<typeof LagrangeFormSchema>;
 export type DataPoint = { x: number; y: number };
+
+    
